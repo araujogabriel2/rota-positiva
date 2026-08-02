@@ -10,6 +10,7 @@ class TestConfig:
     WTF_CSRF_ENABLED = False
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    LOGIN_REQUIRED = False
 
 
 @pytest.fixture()

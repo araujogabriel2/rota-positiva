@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
+  {% if session.get('logged_in') %}
   <nav class="navbar navbar-expand-lg navbar-dark sticky-top app-navbar">
     <div class="container">
       <a class="navbar-brand fw-bold" href="{{ url_for('main.dashboard') }}">
@@ -24,10 +25,12 @@
           <li class="nav-item"><a class="nav-link" href="{{ url_for('records.history') }}">Histórico</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('reports.index') }}">Relatórios</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('categories.index') }}">Categorias</a></li>
+          <li class="nav-item"><a class="nav-link text-danger fw-bold ms-lg-2" href="{{ url_for('main.logout') }}">Sair</a></li>
         </ul>
       </div>
     </div>
   </nav>
+  {% endif %}
 
   <main class="container py-4 py-lg-5">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -41,7 +44,10 @@
     {% block content %}{% endblock %}
   </main>
 
+  {% if session.get('logged_in') %}
   <footer class="container pb-4 text-center text-secondary small">Rota Positiva · Controle financeiro simples para quem vive na direção</footer>
+  {% endif %}
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   {% block scripts %}{% endblock %}

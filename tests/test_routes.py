@@ -97,3 +97,37 @@ def test_dashboard_period_filters_update_totals(client, app):
     assert "R$ 400,00" in custom_page
     assert 'name="period" value="custom"' in custom_page
     assert 'name="period" value="custom" disabled' not in custom_page
+
+
+def test_login_flow(client, app):
+    # Ativa temporariamente a obrigatoriedade de login
+    app.config["LOGIN_REQUIRED"] = True
+    try:
+        # 1. Tentar acessar o dashboard deslogado -> deve redirecionar para /login
+        response = client.get("/", follow_redirects=False)
+        assert response.status_code == 302
+        assert "/login" in response.headers["Location"]
+        
+        # 2. Tentar logar com credenciais inválidas
+        response = client.post("/login", data={"username": "wrong", "password": "wrong"}, follow_redirects=True)
+        assert "Usuário ou senha incorretos." in response.get_data(as_text=True)
+        
+        # 3. Logar com credenciais válidas (admin/admin)
+        response = client.post("/login", data={"username": "admin", "password": "admin"}, follow_redirects=True)
+        assert "Login realizado com sucesso!" in response.get_data(as_text=True)
+        
+        # 4. Acessar o dashboard agora que está logado -> deve retornar 200
+        response = client.get("/")
+        assert response.status_code == 200
+        
+        # 5. Fazer logout
+        response = client.get("/logout", follow_redirects=True)
+        assert "Sessão encerrada." in response.get_data(as_text=True)
+        
+        # 6. Tentar acessar novamente o dashboard deslogado -> deve redirecionar
+        response = client.get("/", follow_redirects=False)
+        assert response.status_code == 302
+    finally:
+        # Restaura configuração original
+        app.config["LOGIN_REQUIRED"] = False
+
