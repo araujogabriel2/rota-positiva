@@ -11,7 +11,7 @@ Aplicação web responsiva para o controle financeiro diário de motoristas de a
 - Dashboard para hoje, últimos 7 dias, mês atual ou período personalizado.
 - Gráficos de faturamento, lucro e despesas por categoria.
 - Relatório PDF profissional com resumo e detalhamento.
-- Banco SQLite criado automaticamente na primeira execução.
+- Banco SQLite local ou PostgreSQL hospedado no Supabase.
 - Interface em português, responsiva e otimizada para celular.
 
 ## Pré-requisitos e instalação do Python
@@ -66,6 +66,55 @@ $env:SECRET_KEY = "uma-chave-longa-e-aleatoria"
 python run.py
 ```
 
+## Usar PostgreSQL no Supabase
+
+O SQLite continua sendo o padrão quando `DATABASE_URL` não está definida. Para
+usar o Supabase sem expor credenciais:
+
+1. No painel do Supabase, abra **Connect > Direct > Session pooler > URI**.
+2. Copie `.env.example` para um novo arquivo chamado `.env`.
+3. Cole a URI em `DATABASE_URL`, mantendo `[YOUR-PASSWORD]` no endereço.
+4. Informe a senha real separadamente em `DATABASE_PASSWORD`.
+5. Gere valores privados para `SECRET_KEY` e `ADMIN_PASSWORD`.
+6. Instale as dependências novamente.
+
+Windows (PowerShell):
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+python -m pip install -r requirements.txt
+```
+
+O arquivo `.env` está no `.gitignore` e nunca deve ser commitado. A aplicação
+codifica a senha para uso seguro na URI e usa o driver Psycopg 3.
+
+Teste a conexão antes de criar tabelas ou migrar dados:
+
+```powershell
+python scripts/check_database_connection.py
+```
+
+O teste executa apenas `SELECT 1` e não modifica o banco.
+
+### Migrar os dados existentes do SQLite
+
+Faça um backup de `instance/financeiro.db`, feche o servidor Flask e execute:
+
+```powershell
+python scripts/migrate_sqlite_to_postgres.py
+```
+
+A ferramenta cria as tabelas ausentes e copia categorias, registros e despesas
+em uma única transação. Se o PostgreSQL já contiver registros ou despesas, a
+migração é cancelada para evitar duplicação. O SQLite de origem não é alterado.
+
+Depois da migração, inicie normalmente:
+
+```powershell
+python run.py
+```
+
 ## Como usar
 
 1. Abra **Novo registro**, informe data, faturamento e quilômetros.
@@ -102,6 +151,7 @@ app/
   extensions.py        # SQLAlchemy e proteção CSRF
   models.py             # entidades do banco
 instance/              # banco SQLite local (criado automaticamente)
+scripts/               # migração segura do SQLite para PostgreSQL
 tests/                 # testes automatizados
 requirements.txt       # dependências fixadas
 run.py                 # ponto de entrada
