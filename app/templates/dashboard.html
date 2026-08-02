@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · Rota Positiva{% endblock %}
+{% block content %}
+<div class="page-heading d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+  <div>
+    <span class="eyebrow">VISÃO GERAL</span>
+    <h1>Seu trabalho, em números claros.</h1>
+    <p>Resumo de {{ start|brdate }} a {{ end|brdate }}</p>
+  </div>
+  <a class="btn btn-accent btn-lg" href="{{ url_for('records.create') }}">+ Novo registro</a>
+</div>
+{% include '_period_filter.html' %}
+
+<section class="row g-3 mb-4">
+  <div class="col-6 col-xl-3"><div class="metric-card revenue"><span>Faturamento</span><strong>{{ summary.revenue|brl }}</strong><small>no período</small></div></div>
+  <div class="col-6 col-xl-3"><div class="metric-card expense"><span>Despesas</span><strong>{{ summary.expenses|brl }}</strong><small>no período</small></div></div>
+  <div class="col-6 col-xl-3"><div class="metric-card profit"><span>Lucro líquido</span><strong>{{ summary.profit|brl }}</strong><small>após despesas</small></div></div>
+  <div class="col-6 col-xl-3"><div class="metric-card distance"><span>Quilômetros</span><strong>{{ '%.2f'|format(summary.kilometers)|replace('.', ',') }} km</strong><small>rodados</small></div></div>
+</section>
+
+<section class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="mini-metric"><span>Média faturada/dia</span><strong>{{ summary.average_revenue|brl }}</strong></div></div>
+  <div class="col-6 col-lg-3"><div class="mini-metric"><span>Média de lucro/dia</span><strong>{{ summary.average_profit|brl }}</strong></div></div>
+  <div class="col-6 col-lg-3"><div class="mini-metric"><span>Ganho médio/km</span><strong>{{ summary.gross_per_km|brl }}</strong></div></div>
+  <div class="col-6 col-lg-3"><div class="mini-metric"><span>Custo médio/km</span><strong>{{ summary.cost_per_km|brl }}</strong></div></div>
+</section>
+
+<section class="row g-3">
+  <div class="col-lg-8"><div class="content-card"><div class="card-title-row"><h2>Movimento diário</h2><span>Faturamento e lucro</span></div><div class="chart-wrap"><canvas id="dailyChart"></canvas></div></div></div>
+  <div class="col-lg-4"><div class="content-card"><div class="card-title-row"><h2>Despesas</h2><span>Por categoria</span></div><div class="chart-wrap"><canvas id="categoryChart"></canvas></div></div></div>
+</section>
+{% if not records %}<div class="empty-state mt-4"><h2>Comece pelo primeiro dia</h2><p>Cadastre faturamento, quilômetros e despesas para ver seus indicadores.</p><a class="btn btn-primary" href="{{ url_for('records.create') }}">Cadastrar agora</a></div>{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>window.dashboardData = {{ chart_data|tojson }};</script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

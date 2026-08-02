@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block title %}Relatórios · Rota Positiva{% endblock %}
+{% block content %}
+<div class="page-heading d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4"><div><span class="eyebrow">RELATÓRIO FINANCEIRO</span><h1>Feche as contas do período.</h1><p>Revise o resumo e baixe um PDF completo e profissional.</p></div><a class="btn btn-accent btn-lg" href="{{ url_for('reports.pdf', period=period, start=start.isoformat(), end=end.isoformat()) }}">Baixar PDF</a></div>
+{% include '_period_filter.html' %}
+<section class="row g-3 mb-4"><div class="col-6 col-lg-3"><div class="metric-card revenue"><span>Faturamento</span><strong>{{ summary.revenue|brl }}</strong></div></div><div class="col-6 col-lg-3"><div class="metric-card expense"><span>Despesas</span><strong>{{ summary.expenses|brl }}</strong></div></div><div class="col-6 col-lg-3"><div class="metric-card profit"><span>Lucro</span><strong>{{ summary.profit|brl }}</strong></div></div><div class="col-6 col-lg-3"><div class="metric-card distance"><span>Quilômetros</span><strong>{{ summary.kilometers }} km</strong></div></div></section>
+<div class="content-card"><div class="card-title-row"><h2>O PDF inclui</h2><span>{{ start|brdate }} a {{ end|brdate }}</span></div><div class="report-features"><div>Resumo financeiro completo</div><div>Indicadores por quilômetro</div><div>Despesas por categoria</div><div>Registros diários detalhados</div><div>Lista de todas as despesas</div><div>Data, horário e paginação</div></div>{% if not records %}<p class="alert alert-warning mt-3 mb-0">Não há registros neste período. O PDF será gerado com os totais zerados.</p>{% endif %}</div>
+{% endblock %}

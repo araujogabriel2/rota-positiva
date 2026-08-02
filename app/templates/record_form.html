@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if record.id else 'Novo' }} registro · Rota Positiva{% endblock %}
+{% block content %}
+<div class="page-heading mb-4">
+  <span class="eyebrow">{{ 'ATUALIZAR DIA' if record.id else 'CADASTRO DIÁRIO' }}</span>
+  <h1>{{ 'Editar registro' if record.id else 'Como foi o dia de trabalho?' }}</h1>
+  <p>Preencha os valores do dia e inclua quantas despesas precisar.</p>
+</div>
+<form method="post" id="recordForm" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="content-card mb-4">
+    <h2 class="section-title">Resumo do dia</h2>
+    <div class="row g-3">
+      <div class="col-md-4"><label class="form-label" for="date">Data *</label><input class="form-control form-control-lg" id="date" name="date" type="date" required value="{{ request.form.get('date', record.date.isoformat() if record.date else '') }}"></div>
+      <div class="col-md-4"><label class="form-label" for="gross_revenue">Faturamento bruto *</label><div class="input-group input-group-lg"><span class="input-group-text">R$</span><input class="form-control money-input" id="gross_revenue" name="gross_revenue" inputmode="decimal" required min="0" placeholder="0,00" value="{{ request.form.get('gross_revenue', record.gross_revenue if record.gross_revenue is not none else '') }}"></div></div>
+      <div class="col-md-4"><label class="form-label" for="kilometers">Quilômetros rodados *</label><div class="input-group input-group-lg"><input class="form-control money-input" id="kilometers" name="kilometers" inputmode="decimal" required min="0" placeholder="0,00" value="{{ request.form.get('kilometers', record.kilometers if record.kilometers is not none else '') }}"><span class="input-group-text">km</span></div></div>
+      <div class="col-12"><label class="form-label" for="notes">Observações</label><textarea class="form-control" id="notes" name="notes" rows="3" maxlength="2000" placeholder="Ex.: chuva forte, evento na cidade, turno da noite...">{{ request.form.get('notes', record.notes or '') }}</textarea></div>
+    </div>
+  </section>
+
+  <section class="content-card mb-4">
+    <div class="d-flex justify-content-between align-items-center gap-3 mb-3"><div><h2 class="section-title mb-1">Despesas</h2><p class="text-secondary mb-0">Registre cada gasto separadamente.</p></div><button class="btn btn-outline-primary flex-shrink-0" type="button" id="addExpense">+ Adicionar</button></div>
+    <div id="expenseList"></div>
+    <div id="noExpenses" class="empty-inline">Nenhuma despesa adicionada.</div>
+  </section>
+
+  <section class="calculation-strip mb-4" aria-live="polite">
+    <div><span>Despesas</span><strong id="calcExpenses">R$ 0,00</strong></div>
+    <div><span>Lucro líquido</span><strong id="calcProfit">R$ 0,00</strong></div>
+    <div><span>Ganho/km</span><strong id="calcGrossKm">R$ 0,00</strong></div>
+    <div><span>Custo/km</span><strong id="calcCostKm">R$ 0,00</strong></div>
+    <div><span>Lucro/km</span><strong id="calcProfitKm">R$ 0,00</strong></div>
+  </section>
+  <div class="d-grid d-sm-flex justify-content-sm-end gap-2"><a class="btn btn-light btn-lg" href="{{ url_for('records.history') }}">Cancelar</a><button class="btn btn-accent btn-lg px-5" type="submit">Salvar registro</button></div>
+</form>
+
+<template id="expenseTemplate">
+  <div class="expense-row border rounded-3 p-3 mb-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3"><label class="form-label">Categoria *</label><select class="form-select expense-category" name="expense_category[]" required><option value="">Selecione</option>{% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-5"><label class="form-label">Descrição *</label><input class="form-control expense-description" name="expense_description[]" maxlength="180" required placeholder="Ex.: abastecimento"></div>
+      <div class="col-9 col-md-3"><label class="form-label">Valor *</label><div class="input-group"><span class="input-group-text">R$</span><input class="form-control expense-amount money-input" name="expense_amount[]" inputmode="decimal" required placeholder="0,00"></div></div>
+      <div class="col-3 col-md-1"><button class="btn btn-outline-danger w-100 remove-expense" type="button" aria-label="Remover despesa">×</button></div>
+    </div>
+  </div>
+</template>
+<script id="initialExpenses" type="application/json">{{ expense_rows|tojson }}</script>
+{% endblock %}
