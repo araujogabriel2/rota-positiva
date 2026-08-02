@@ -2,9 +2,8 @@
 {% block title %}{{ 'Editar' if record.id else 'Novo' }} registro · Rota Positiva{% endblock %}
 {% block content %}
 <div class="page-heading mb-4">
-  <span class="eyebrow">{{ 'ATUALIZAR DIA' if record.id else 'CADASTRO DIÁRIO' }}</span>
-  <h1>{{ 'Editar registro' if record.id else 'Como foi o dia de trabalho?' }}</h1>
-  <p>Preencha os valores do dia e inclua quantas despesas precisar.</p>
+  <h1>{{ 'Editar registro' if record.id else 'Novo registro' }}</h1>
+  <p>Informe os valores do dia e, se necessário, adicione as despesas.</p>
 </div>
 <form method="post" id="recordForm" novalidate>
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
