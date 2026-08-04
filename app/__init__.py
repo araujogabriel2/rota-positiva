@@ -38,5 +38,23 @@ def create_app(config_object=Config):
 
     with app.app_context():
         db.create_all()
+        _seed_global_categories()
 
     return app
+
+
+def _seed_global_categories():
+    from .models import Category
+    from .services.auth import DEFAULT_CATEGORIES
+
+    existing = {
+        name
+        for (name,) in db.session.query(Category.name)
+        .filter(Category.user_id.is_(None))
+        .all()
+    }
+    for name in DEFAULT_CATEGORIES:
+        if name not in existing:
+            db.session.add(Category(name=name, user_id=None, is_default=True))
+    db.session.commit()
+

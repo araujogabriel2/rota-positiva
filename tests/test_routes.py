@@ -19,9 +19,9 @@ def sample_payload(category_id, date_text="2026-08-01"):
 
 def test_dashboard_and_crud_flow(client, app):
     with app.app_context():
-        category_id = Category.query.filter_by(
-            user_id=app.config["TEST_DRIVER_ID"], name="Combustível"
-        ).first().id
+        category_id = Category.query.filter(
+            (Category.user_id == app.config["TEST_DRIVER_ID"]) | (Category.user_id.is_(None))
+        ).filter_by(name="Combustível").first().id
 
     response = client.post("/registros/novo", data=sample_payload(category_id), follow_redirects=True)
     assert "Registro salvo com sucesso" in response.get_data(as_text=True)
@@ -49,7 +49,9 @@ def test_dashboard_and_crud_flow(client, app):
 
 def test_validation_and_categories(client, app):
     with app.app_context():
-        category_id = Category.query.filter_by(user_id=app.config["TEST_DRIVER_ID"]).first().id
+        category_id = Category.query.filter(
+            (Category.user_id == app.config["TEST_DRIVER_ID"]) | (Category.user_id.is_(None))
+        ).first().id
     bad = sample_payload(category_id)
     bad["gross_revenue"] = "-2"
     bad["kilometers"] = "inválido"

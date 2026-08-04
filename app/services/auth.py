@@ -49,11 +49,6 @@ def generate_temporary_password(length=16):
             return password
 
 
-def add_default_categories(user):
-    for name in DEFAULT_CATEGORIES:
-        db.session.add(Category(user=user, name=name, is_default=True))
-
-
 def create_user(name, username, role="driver"):
     temporary_password = generate_temporary_password()
     user = User(
@@ -65,8 +60,23 @@ def create_user(name, username, role="driver"):
     )
     user.set_password(temporary_password)
     db.session.add(user)
-    add_default_categories(user)
     return user, temporary_password
+
+
+def create_oauth_user(name, email, supabase_id):
+    user = User(
+        name=name.strip(),
+        username=email.strip().lower(),
+        supabase_id=supabase_id,
+        role="driver",
+        must_change_password=False,
+        is_active_account=True,
+        password_hash="oauth_authenticated",
+    )
+    db.session.add(user)
+    return user
+
+
 
 
 def admin_required(view):

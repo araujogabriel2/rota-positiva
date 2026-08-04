@@ -9,7 +9,10 @@ records_bp = Blueprint("records", __name__)
 
 
 def _categories():
-    return Category.query.filter_by(user_id=current_user.id).order_by(Category.name.asc()).all()
+    return Category.query.filter(
+        (Category.user_id == current_user.id) | (Category.user_id.is_(None))
+    ).order_by(Category.name.asc()).all()
+
 
 
 def _expense_rows(record):
