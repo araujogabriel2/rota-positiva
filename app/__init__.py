@@ -3,7 +3,7 @@ import os
 from flask import Flask
 
 from .config import Config
-from .extensions import csrf, db
+from .extensions import csrf, db, login_manager
 
 
 def create_app(config_object=Config):
@@ -13,12 +13,24 @@ def create_app(config_object=Config):
 
     db.init_app(app)
     csrf.init_app(app)
+    login_manager.init_app(app)
 
+    from .models import User
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        user = db.session.get(User, int(user_id))
+        return user if user and user.is_active else None
+
+    from .routes.admin import admin_bp
+    from .routes.auth import auth_bp
     from .routes.categories import categories_bp
     from .routes.main import main_bp
     from .routes.records import records_bp
     from .routes.reports import reports_bp
 
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(main_bp)
     app.register_blueprint(records_bp, url_prefix="/registros")
     app.register_blueprint(categories_bp, url_prefix="/categorias")
@@ -26,21 +38,5 @@ def create_app(config_object=Config):
 
     with app.app_context():
         db.create_all()
-        _seed_categories()
 
     return app
-
-
-def _seed_categories():
-    from .models import Category
-
-    defaults = [
-        "Combustível", "Alimentação", "Manutenção", "Pedágio",
-        "Lavagem", "Estacionamento", "Outros",
-    ]
-    existing = {name for (name,) in db.session.query(Category.name).all()}
-    for name in defaults:
-        if name not in existing:
-            db.session.add(Category(name=name, is_default=True))
-    db.session.commit()
-

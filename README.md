@@ -75,7 +75,7 @@ usar o Supabase sem expor credenciais:
 2. Copie `.env.example` para um novo arquivo chamado `.env`.
 3. Cole a URI em `DATABASE_URL`, mantendo `[YOUR-PASSWORD]` no endereço.
 4. Informe a senha real separadamente em `DATABASE_PASSWORD`.
-5. Gere valores privados para `SECRET_KEY` e `ADMIN_PASSWORD`.
+5. Gere um valor privado para `SECRET_KEY`.
 6. Instale as dependências novamente.
 
 Windows (PowerShell):
@@ -115,6 +115,25 @@ Depois da migração, inicie normalmente:
 python run.py
 ```
 
+## Contas de motoristas
+
+O sistema permite até 5 contas por padrão. Cada motorista visualiza e altera
+somente os próprios registros. O administrador visualiza todos os registros,
+filtra por motorista e gerencia as contas, mas não edita dados financeiros de
+outras pessoas.
+
+Depois de atualizar o código existente, feche o Flask e execute uma vez:
+
+```powershell
+python scripts/upgrade_multiuser_schema.py
+```
+
+O comando cria a conta administradora, associa dados existentes a ela e mostra
+uma senha temporária uma única vez. No primeiro login, o administrador deve
+criar uma senha pessoal. Novos motoristas também recebem uma senha temporária e
+são obrigados a trocá-la. O administrador pode redefinir senhas e desativar ou
+reativar contas.
+
 ## Como usar
 
 1. Abra **Novo registro**, informe data, faturamento e quilômetros.
@@ -142,7 +161,7 @@ Os testes usam um banco SQLite em memória e não alteram os dados reais.
 
 ```text
 app/
-  routes/              # dashboard, registros, categorias e relatórios
+  routes/              # autenticação, administração e finanças
   services/            # cálculos, validações e geração do PDF
   static/css/          # identidade visual responsiva
   static/js/           # despesas dinâmicas, cálculos e gráficos
@@ -159,8 +178,9 @@ run.py                 # ponto de entrada
 
 ## Modelo de dados
 
-- `DailyRecord`: um dia de trabalho, com data única, faturamento, quilômetros e observações.
+- `User`: conta de administrador ou motorista, com senha protegida por hash.
+- `DailyRecord`: um dia de trabalho pertencente a um usuário.
 - `Expense`: despesa vinculada a um registro diário e a uma categoria.
-- `Category`: categorias padrão ou criadas pelo usuário.
+- `Category`: categorias padrão ou personalizadas pertencentes ao usuário.
 
 Ao excluir um registro diário, suas despesas são excluídas em conjunto. Categorias padrão e categorias que já possuem despesas são protegidas contra exclusão.

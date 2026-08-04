@@ -85,6 +85,7 @@ def build_report(records, start, end):
     )
     normal = ParagraphStyle("Body", parent=styles["Normal"], fontSize=8, leading=10)
     summary = summarize(records)
+    show_driver = len({record.user_id for record in records}) > 1
     generated = datetime.now().astimezone().strftime("%d/%m/%Y às %H:%M")
 
     story = [
@@ -119,28 +120,49 @@ def build_report(records, start, end):
     story += [_table(category_rows, [110 * mm, 70 * mm, 70 * mm], font_size=8)]
 
     story += [Paragraph("Registros diários", heading)]
-    daily_rows = [["Data", "Faturamento", "Km", "Despesas", "Lucro", "Ganho/km", "Custo/km", "Observações"]]
+    daily_header = ["Data", "Faturamento", "Km", "Despesas", "Lucro", "Ganho/km", "Custo/km", "Observações"]
+    if show_driver:
+        daily_header.insert(0, "Motorista")
+    daily_rows = [daily_header]
     for record in records:
-        daily_rows.append([
+        row = [
             _date(record.date), _money(record.gross_revenue), f"{float(record.kilometers):.2f}",
             _money(record.total_expenses), _money(record.net_profit), _money(record.gross_per_km),
             _money(record.cost_per_km), Paragraph(escape(record.notes or "-"), normal),
-        ])
+        ]
+        if show_driver:
+            row.insert(0, record.user.name)
+        daily_rows.append(row)
     if len(daily_rows) == 1:
         daily_rows.append(["Nenhum registro", "-", "-", "-", "-", "-", "-", "-"])
-    story += [_table(daily_rows, [20*mm, 30*mm, 20*mm, 30*mm, 30*mm, 28*mm, 28*mm, 60*mm], font_size=7)]
+    daily_widths = [20*mm, 30*mm, 20*mm, 30*mm, 30*mm, 28*mm, 28*mm, 60*mm]
+    if show_driver:
+        daily_widths = [30*mm] + [18*mm, 26*mm, 16*mm, 26*mm, 26*mm, 24*mm, 24*mm, 55*mm]
+    story += [_table(daily_rows, daily_widths, font_size=7)]
 
     story += [PageBreak(), Paragraph("Detalhamento das despesas", heading)]
-    expense_rows = [["Data", "Categoria", "Descrição", "Valor"]]
+    expense_header = ["Data", "Categoria", "Descrição", "Valor"]
+    if show_driver:
+        expense_header.insert(0, "Motorista")
+    expense_rows = [expense_header]
     for record in records:
         for expense in record.expenses:
-            expense_rows.append([
+            row = [
                 _date(record.date), expense.category.name,
                 Paragraph(escape(expense.description), normal), _money(expense.amount),
-            ])
+            ]
+            if show_driver:
+                row.insert(0, record.user.name)
+            expense_rows.append(row)
     if len(expense_rows) == 1:
-        expense_rows.append(["-", "-", "Nenhuma despesa no período", _money(0)])
-    story += [_table(expense_rows, [35*mm, 65*mm, 120*mm, 35*mm], font_size=8)]
+        empty_expense = ["-", "-", "Nenhuma despesa no período", _money(0)]
+        if show_driver:
+            empty_expense.insert(0, "-")
+        expense_rows.append(empty_expense)
+    expense_widths = [35*mm, 65*mm, 120*mm, 35*mm]
+    if show_driver:
+        expense_widths = [40*mm, 30*mm, 55*mm, 100*mm, 30*mm]
+    story += [_table(expense_rows, expense_widths, font_size=8)]
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     stream.seek(0)

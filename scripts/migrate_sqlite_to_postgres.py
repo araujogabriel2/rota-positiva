@@ -12,7 +12,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.config import Config  # noqa: E402
 from app.extensions import db  # noqa: E402
-from app.models import Category, DailyRecord, Expense  # noqa: E402
+from app.models import Category, DailyRecord, Expense, User  # noqa: E402
 
 
 def parse_args():
@@ -51,11 +51,15 @@ def copy_data(source_engine, target_engine):
     category_table = Category.__table__
     record_table = DailyRecord.__table__
     expense_table = Expense.__table__
+    user_table = User.__table__
 
     # Cria somente tabelas ausentes. Nenhuma tabela existente é apagada.
     db.metadata.create_all(target_engine)
 
     with source_engine.connect() as source:
+        source_users = source.execute(
+            select(user_table).order_by(user_table.c.id)
+        ).mappings().all()
         source_categories = source.execute(
             select(category_table).order_by(category_table.c.id)
         ).mappings().all()
@@ -79,20 +83,38 @@ def copy_data(source_engine, target_engine):
                 "A migração foi cancelada para evitar dados duplicados."
             )
 
-        existing_categories = {
-            row["name"]: row["id"]
+        existing_users = {
+            row["username"]: row["id"]
             for row in target.execute(
-                select(category_table.c.id, category_table.c.name)
+                select(user_table.c.id, user_table.c.username)
+            ).mappings()
+        }
+        user_ids = {}
+        for user in source_users:
+            user_id = existing_users.get(user["username"])
+            if user_id is None:
+                values = {key: value for key, value in user.items() if key != "id"}
+                user_id = target.execute(
+                    insert(user_table).values(**values).returning(user_table.c.id)
+                ).scalar_one()
+            user_ids[user["id"]] = user_id
+
+        existing_categories = {
+            (row["user_id"], row["name"]): row["id"]
+            for row in target.execute(
+                select(category_table.c.id, category_table.c.user_id, category_table.c.name)
             ).mappings()
         }
         category_ids = {}
         for category in source_categories:
-            category_id = existing_categories.get(category["name"])
+            target_user_id = user_ids[category["user_id"]]
+            category_id = existing_categories.get((target_user_id, category["name"]))
             if category_id is None:
                 category_id = target.execute(
                     insert(category_table)
                     .values(
                         name=category["name"],
+                        user_id=target_user_id,
                         is_default=category["is_default"],
                         created_at=category["created_at"],
                     )
@@ -105,6 +127,7 @@ def copy_data(source_engine, target_engine):
             record_id = target.execute(
                 insert(record_table)
                 .values(
+                    user_id=user_ids[record["user_id"]],
                     date=record["date"],
                     gross_revenue=record["gross_revenue"],
                     kilometers=record["kilometers"],
@@ -127,6 +150,7 @@ def copy_data(source_engine, target_engine):
             )
 
     return {
+        "users": len(source_users),
         "categories": len(source_categories),
         "records": len(source_records),
         "expenses": len(source_expenses),
@@ -142,6 +166,7 @@ def main():
         return 1
 
     print("Migração concluída com sucesso.")
+    print(f"Usuários: {totals['users']}")
     print(f"Categorias: {totals['categories']}")
     print(f"Registros diários: {totals['records']}")
     print(f"Despesas: {totals['expenses']}")

@@ -30,8 +30,11 @@ def parse_date(value, field_name="Data"):
         raise ValueError(f"{field_name} inválida.")
 
 
-def latest_record_date():
-    return db.session.query(func.max(DailyRecord.date)).scalar()
+def latest_record_date(user_id=None):
+    query = db.session.query(func.max(DailyRecord.date))
+    if user_id is not None:
+        query = query.filter(DailyRecord.user_id == user_id)
+    return query.scalar()
 
 
 def get_period(args, default="month", reference_date=None):
@@ -53,15 +56,16 @@ def get_period(args, default="month", reference_date=None):
     return today.replace(day=1), month_end, "month"
 
 
-def records_between(start, end):
-    return (
+def records_between(start, end, user_id=None):
+    query = (
         DailyRecord.query.options(
             selectinload(DailyRecord.expenses).selectinload(Expense.category)
         )
         .filter(DailyRecord.date.between(start, end))
-        .order_by(DailyRecord.date.asc())
-        .all()
     )
+    if user_id is not None:
+        query = query.filter(DailyRecord.user_id == user_id)
+    return query.order_by(DailyRecord.date.asc()).all()
 
 
 def summarize(records):
@@ -87,7 +91,7 @@ def summarize(records):
     }
 
 
-def validate_record_form(form, editing_id=None):
+def validate_record_form(form, editing_id=None, user_id=None):
     errors = []
     try:
         record_date = parse_date(form.get("date"))
@@ -107,6 +111,8 @@ def validate_record_form(form, editing_id=None):
 
     if record_date:
         query = DailyRecord.query.filter_by(date=record_date)
+        if user_id is not None:
+            query = query.filter_by(user_id=user_id)
         if editing_id:
             query = query.filter(DailyRecord.id != editing_id)
         if query.first():
