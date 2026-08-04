@@ -1,12 +1,13 @@
 <form method="get" class="filter-card mb-4" data-period-form>
   <div class="d-flex flex-wrap gap-2 period-pills mb-3">
-    <a class="btn {{ 'active' if period == 'today' }}" href="{{ url_for(request.endpoint, period='today') }}">Hoje</a>
-    <a class="btn {{ 'active' if period == '7days' }}" href="{{ url_for(request.endpoint, period='7days') }}">Últimos 7 dias</a>
-    <a class="btn {{ 'active' if period == 'month' }}" href="{{ url_for(request.endpoint, period='month') }}">Mês atual</a>
+    <a class="btn {{ 'active' if period == 'today' }}" href="{{ url_for(request.endpoint, period='today', driver=selected_user_id) }}">Hoje</a>
+    <a class="btn {{ 'active' if period == '7days' }}" href="{{ url_for(request.endpoint, period='7days', driver=selected_user_id) }}">Últimos 7 dias</a>
+    <a class="btn {{ 'active' if period == 'month' }}" href="{{ url_for(request.endpoint, period='month', driver=selected_user_id) }}">Mês atual</a>
     <button class="btn {{ 'active' if period == 'custom' }}" type="button" data-custom-period>Personalizado</button>
   </div>
   <div class="row g-3 {{ '' if period == 'custom' else 'd-none' }}" data-custom-fields>
     <input type="hidden" name="period" value="custom" {% if period != 'custom' %}disabled{% endif %} data-custom-input>
+    {% if selected_user_id %}<input type="hidden" name="driver" value="{{ selected_user_id }}">{% endif %}
     <div class="col-sm-5">
       <label class="form-label" for="start">Data inicial</label>
       <input class="form-control" type="date" id="start" name="start" value="{{ start.isoformat() }}">

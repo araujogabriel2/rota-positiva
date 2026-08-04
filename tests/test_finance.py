@@ -16,8 +16,10 @@ def test_parse_decimal_accepts_brazilian_format_and_rejects_negative():
 
 def test_financial_calculations_and_zero_kilometers(app):
     with app.app_context():
-        category = Category.query.filter_by(name="Combustível").first()
+        driver_id = app.config["TEST_DRIVER_ID"]
+        category = Category.query.filter_by(user_id=driver_id, name="Combustível").first()
         record = DailyRecord(
+            user_id=driver_id,
             date=date(2026, 8, 1), gross_revenue=Decimal("300.00"),
             kilometers=Decimal("100.00"),
         )
@@ -28,7 +30,7 @@ def test_financial_calculations_and_zero_kilometers(app):
         assert record.cost_per_km == Decimal("0.8")
         assert record.net_per_km == Decimal("2.2")
 
-        zero = DailyRecord(date=date(2026, 8, 2), gross_revenue=Decimal("10"), kilometers=Decimal("0"))
+        zero = DailyRecord(user_id=driver_id, date=date(2026, 8, 2), gross_revenue=Decimal("10"), kilometers=Decimal("0"))
         assert zero.gross_per_km == Decimal("0.00")
         assert zero.cost_per_km == Decimal("0.00")
         assert zero.net_per_km == Decimal("0.00")

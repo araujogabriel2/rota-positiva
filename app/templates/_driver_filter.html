@@ -1,0 +1,14 @@
+{% if current_user.is_admin %}
+<form method="get" class="filter-card mb-4">
+  <label class="form-label" for="driver">Visualizar dados de</label>
+  <div class="d-flex flex-column flex-sm-row gap-2">
+    <select class="form-select" id="driver" name="driver">
+      <option value="">Todos os motoristas</option>
+      {% for driver in drivers %}
+      <option value="{{ driver.id }}" {{ 'selected' if selected_user_id == driver.id }}>{{ driver.name }} ({{ driver.username }})</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-primary" type="submit">Aplicar</button>
+  </div>
+</form>
+{% endif %}

@@ -2,7 +2,9 @@
 {% block title %}Histórico · Rota Positiva{% endblock %}
 {% block content %}
 <div class="page-heading d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4"><div><h1>Histórico</h1><p>Consulte, edite ou veja os detalhes de cada dia.</p></div><a class="btn btn-accent" href="{{ url_for('records.create') }}">Novo registro</a></div>
+{% include '_driver_filter.html' %}
 <form class="filter-card mb-4" method="get">
+  {% if selected_user_id %}<input type="hidden" name="driver" value="{{ selected_user_id }}">{% endif %}
   <div class="row g-3 align-items-end">
     <div class="col-md-3"><label class="form-label" for="start">Data inicial</label><input class="form-control" id="start" name="start" type="date" value="{{ start }}"></div>
     <div class="col-md-3"><label class="form-label" for="end">Data final</label><input class="form-control" id="end" name="end" type="date" value="{{ end }}"></div>
@@ -10,11 +12,9 @@
     <div class="col-md-3 d-flex gap-2"><button class="btn btn-primary flex-grow-1">Filtrar</button><a class="btn btn-light" href="{{ url_for('records.history') }}">Limpar</a></div>
   </div>
 </form>
-<div class="content-card p-0 overflow-hidden">
-  <div class="table-responsive"><table class="table app-table align-middle mb-0"><thead><tr><th>Data</th><th>Faturamento</th><th>Km</th><th>Despesas</th><th>Lucro</th><th>Ganho/km</th><th class="text-end">Ações</th></tr></thead><tbody>
-  {% for record in records %}<tr><td><strong>{{ record.date|brdate }}</strong></td><td>{{ record.gross_revenue|brl }}</td><td>{{ '%.2f'|format(record.kilometers)|replace('.', ',') }}</td><td class="text-danger">{{ record.total_expenses|brl }}</td><td class="{{ 'text-success' if record.net_profit >= 0 else 'text-danger' }} fw-semibold">{{ record.net_profit|brl }}</td><td>{{ record.gross_per_km|brl }}</td><td><div class="d-flex justify-content-end gap-1"><a class="btn btn-sm btn-light" href="{{ url_for('records.detail', record_id=record.id) }}">Ver</a><a class="btn btn-sm btn-outline-primary" href="{{ url_for('records.edit', record_id=record.id) }}">Editar</a><button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-delete-url="{{ url_for('records.delete', record_id=record.id) }}" data-delete-date="{{ record.date|brdate }}">Excluir</button></div></td></tr>
-  {% else %}<tr><td colspan="7"><div class="empty-state border-0"><h2>Nenhum registro encontrado</h2><p>Ajuste os filtros ou cadastre um novo dia.</p></div></td></tr>{% endfor %}
-  </tbody></table></div>
-</div>
+<div class="content-card p-0 overflow-hidden"><div class="table-responsive"><table class="table app-table align-middle mb-0"><thead><tr>{% if current_user.is_admin %}<th>Motorista</th>{% endif %}<th>Data</th><th>Faturamento</th><th>Km</th><th>Despesas</th><th>Lucro</th><th>Ganho/km</th><th class="text-end">Ações</th></tr></thead><tbody>
+{% for record in records %}<tr>{% if current_user.is_admin %}<td>{{ record.user.name }}</td>{% endif %}<td><strong>{{ record.date|brdate }}</strong></td><td>{{ record.gross_revenue|brl }}</td><td>{{ '%.2f'|format(record.kilometers)|replace('.', ',') }}</td><td class="text-danger">{{ record.total_expenses|brl }}</td><td class="{{ 'text-success' if record.net_profit >= 0 else 'text-danger' }} fw-semibold">{{ record.net_profit|brl }}</td><td>{{ record.gross_per_km|brl }}</td><td><div class="d-flex justify-content-end gap-1"><a class="btn btn-sm btn-light" href="{{ url_for('records.detail', record_id=record.id) }}">Ver</a>{% if record.user_id == current_user.id %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('records.edit', record_id=record.id) }}">Editar</a><button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-delete-url="{{ url_for('records.delete', record_id=record.id) }}" data-delete-date="{{ record.date|brdate }}">Excluir</button>{% endif %}</div></td></tr>
+{% else %}<tr><td colspan="{{ 8 if current_user.is_admin else 7 }}"><div class="empty-state border-0"><h2>Nenhum registro encontrado</h2><p>Ajuste os filtros ou cadastre um novo dia.</p></div></td></tr>{% endfor %}
+</tbody></table></div></div>
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="deleteTitle">Excluir registro?</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body">Esta ação removerá o registro de <strong data-delete-date-label></strong> e todas as suas despesas.</div><div class="modal-footer"><button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button><form method="post" data-delete-form><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">Sim, excluir</button></form></div></div></div></div>
 {% endblock %}
