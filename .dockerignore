@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+instance/*.db
+.env
+.git/
+.gitignore
+README.md
+tests/
+walkthrough.md
+task.md
+implementation_plan.md
+*.log
+docker-compose*.yml
