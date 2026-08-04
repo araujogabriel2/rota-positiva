@@ -18,7 +18,9 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(40), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
+    supabase_id = db.Column(db.String(255), unique=True, nullable=True, index=True)
     role = db.Column(db.String(20), nullable=False, default="driver")
+
     is_active_account = db.Column(db.Boolean, nullable=False, default=True)
     must_change_password = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
@@ -87,7 +89,7 @@ class Category(db.Model):
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     name = db.Column(db.String(80), nullable=False)
     is_default = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
