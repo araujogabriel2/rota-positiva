@@ -71,3 +71,70 @@ def logout():
     logout_user()
     flash("Sessão encerrada.", "success")
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/login/google")
+def login_google():
+    from ..extensions import supabase
+    if not supabase:
+        flash("Configuração do Supabase (SUPABASE_URL e SUPABASE_KEY) ausente.", "danger")
+        return redirect(url_for("auth.login"))
+        
+    redirect_url = url_for("auth.callback", _external=True)
+    try:
+        res = supabase.auth.sign_in_with_oauth({
+            "provider": "google",
+            "options": {
+                "redirect_to": redirect_url
+            }
+        })
+        return redirect(res.url)
+    except Exception as e:
+        flash(f"Erro ao iniciar login social: {str(e)}", "danger")
+        return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/auth/callback")
+def callback():
+    from ..extensions import supabase
+    if not supabase:
+        flash("Configuração do Supabase ausente.", "danger")
+        return redirect(url_for("auth.login"))
+        
+    code = request.args.get("code")
+    if not code:
+        flash("Código de autenticação ausente.", "danger")
+        return redirect(url_for("auth.login"))
+        
+    try:
+        session_data = supabase.auth.exchange_code_for_session({"auth_code": code})
+        supabase_user = session_data.user
+        
+        # Procura usuário pelo supabase_id
+        user = User.query.filter_by(supabase_id=supabase_user.id).first()
+        if not user:
+            # Tenta encontrar por email (caso seja uma conta local pré-existente)
+            user = User.query.filter_by(username=supabase_user.email).first()
+            if user:
+                user.supabase_id = supabase_user.id
+                db.session.commit()
+            else:
+                from ..services.auth import create_oauth_user
+                user = create_oauth_user(
+                    name=supabase_user.user_metadata.get("full_name", supabase_user.email),
+                    email=supabase_user.email,
+                    supabase_id=supabase_user.id
+                )
+                db.session.commit()
+                
+        if not user.is_active:
+            flash("Esta conta está desativada. Procure o administrador.", "danger")
+            return redirect(url_for("auth.login"))
+            
+        login_user(user)
+        flash("Login realizado com sucesso pelo Google!", "success")
+        return redirect(url_for("main.dashboard"))
+    except Exception as e:
+        flash(f"Erro na autenticação: {str(e)}", "danger")
+        return redirect(url_for("auth.login"))
+

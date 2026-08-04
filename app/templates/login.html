@@ -11,8 +11,20 @@
         <p class="text-muted small">Controle financeiro para motoristas</p>
       </div>
 
+      <!-- Login Social -->
+      <a href="{{ url_for('auth.login_google') }}" class="btn btn-outline-light w-100 py-3 mb-3 d-flex align-items-center justify-content-center gap-2" style="border-color: #3b454a; color: #edf2f3; background: #1a2226; font-size: 0.95rem; border-radius: 10px; font-weight: 600;">
+        <img src="https://authjs.dev/img/providers/google.svg" alt="Google Logo" width="20" height="20">
+        Entrar com o Google
+      </a>
+
+      <div class="text-center my-3 position-relative d-flex align-items-center justify-content-center">
+        <hr class="w-100" style="border-color: var(--line);">
+        <span class="px-2 position-absolute" style="background: #14181b; color: var(--muted); font-size: 0.8rem; font-weight: 700;">OU</span>
+      </div>
+
       <!-- Formulário de autenticação -->
       <form method="post" action="{{ url_for('auth.login') }}">
+
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <div class="mb-3">
