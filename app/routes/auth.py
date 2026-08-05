@@ -1,5 +1,6 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy import func
 
 from ..extensions import db
 from ..models import User
@@ -32,6 +33,8 @@ def login():
         user = User.query.filter_by(username=username).first()
         if not user or not user.check_password(password):
             flash("Usuário ou senha incorretos.", "danger")
+        elif user.is_pending:
+            flash("Seu cadastro está aguardando aprovação do administrador.", "warning")
         elif not user.is_active:
             flash("Esta conta está desativada. Procure o administrador.", "danger")
         else:
@@ -89,8 +92,9 @@ def login_google():
             }
         })
         return redirect(res.url)
-    except Exception as e:
-        flash(f"Erro ao iniciar login social: {str(e)}", "danger")
+    except Exception:
+        current_app.logger.exception("Falha ao iniciar o login Google")
+        flash("Não foi possível iniciar o login com Google. Tente novamente.", "danger")
         return redirect(url_for("auth.login"))
 
 
@@ -109,24 +113,37 @@ def callback():
     try:
         session_data = supabase.auth.exchange_code_for_session({"auth_code": code})
         supabase_user = session_data.user
+        if not supabase_user:
+            raise ValueError("O Supabase não retornou o usuário autenticado.")
         
         # Procura usuário pelo supabase_id
-        user = User.query.filter_by(supabase_id=supabase_user.id).first()
+        user = User.query.filter_by(supabase_id=str(supabase_user.id)).first()
         if not user:
             # Tenta encontrar por email (caso seja uma conta local pré-existente)
-            user = User.query.filter_by(username=supabase_user.email).first()
+            email = str(supabase_user.email or "").strip().lower()
+            if not email:
+                flash("Sua conta Google não forneceu um e-mail válido.", "danger")
+                return redirect(url_for("auth.login"))
+            user = User.query.filter(func.lower(User.username) == email).first()
             if user:
-                user.supabase_id = supabase_user.id
+                if user.supabase_id and user.supabase_id != str(supabase_user.id):
+                    flash("Este e-mail já está associado a outra identidade.", "danger")
+                    return redirect(url_for("auth.login"))
+                user.supabase_id = str(supabase_user.id)
                 db.session.commit()
             else:
                 from ..services.auth import create_oauth_user
+                metadata = supabase_user.user_metadata or {}
                 user = create_oauth_user(
-                    name=supabase_user.user_metadata.get("full_name", supabase_user.email),
+                    name=metadata.get("full_name", email),
                     email=supabase_user.email,
-                    supabase_id=supabase_user.id
+                    supabase_id=str(supabase_user.id)
                 )
                 db.session.commit()
-                
+
+        if user.is_pending:
+            flash("Cadastro recebido. Aguarde a aprovação do administrador.", "warning")
+            return redirect(url_for("auth.login"))
         if not user.is_active:
             flash("Esta conta está desativada. Procure o administrador.", "danger")
             return redirect(url_for("auth.login"))
@@ -134,7 +151,9 @@ def callback():
         login_user(user)
         flash("Login realizado com sucesso pelo Google!", "success")
         return redirect(url_for("main.dashboard"))
-    except Exception as e:
-        flash(f"Erro na autenticação: {str(e)}", "danger")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Falha no retorno do login Google")
+        flash("Não foi possível concluir o login com Google. Tente novamente.", "danger")
         return redirect(url_for("auth.login"))
 

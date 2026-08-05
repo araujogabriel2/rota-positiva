@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from app.extensions import db
 from app.models import User
 from app.services.auth import create_user, generate_temporary_password
@@ -77,3 +79,86 @@ def test_deactivated_driver_loses_an_existing_session(client, admin_client, app)
 
 def test_driver_cannot_access_user_administration(client):
     assert client.get("/admin/usuarios").status_code == 403
+
+
+def test_admin_can_create_more_than_five_users(admin_client, app):
+    for number in range(6):
+        response = admin_client.post(
+            "/admin/usuarios/novo",
+            data={"name": f"Motorista {number}", "username": f"motorista{number}"},
+        )
+        assert response.status_code == 200
+
+    with app.app_context():
+        assert User.query.count() == 9
+
+
+def test_google_user_waits_for_admin_approval(
+    anonymous_client, admin_client, app, monkeypatch
+):
+    supabase_user = SimpleNamespace(
+        id="google-user-123",
+        email="novo.motorista.com.nome.bem.longo@example.com",
+        user_metadata={"full_name": "Novo Motorista"},
+    )
+
+    class FakeAuth:
+        def exchange_code_for_session(self, payload):
+            assert payload == {"auth_code": "codigo-teste"}
+            return SimpleNamespace(user=supabase_user)
+
+    fake_supabase = SimpleNamespace(auth=FakeAuth())
+    monkeypatch.setattr("app.extensions.supabase", fake_supabase)
+
+    response = anonymous_client.get("/auth/callback?code=codigo-teste", follow_redirects=True)
+    assert "cadastro recebido" in response.get_data(as_text=True).lower()
+    with app.app_context():
+        user = User.query.filter_by(supabase_id="google-user-123").one()
+        assert user.is_pending
+        assert not user.is_active
+        user_id = user.id
+
+    response = admin_client.post(
+        f"/admin/usuarios/{user_id}/aprovar", follow_redirects=True
+    )
+    assert "aprovado com sucesso" in response.get_data(as_text=True).lower()
+
+    response = anonymous_client.get("/auth/callback?code=codigo-teste", follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/")
+    with app.app_context():
+        assert db.session.get(User, user_id).is_active
+
+
+def test_pending_local_account_cannot_login(anonymous_client, app):
+    with app.app_context():
+        user, _ = create_user("Conta Pendente", "pendente")
+        user.set_password("senha-pendente-segura")
+        user.status = "pending"
+        user.is_active_account = False
+        db.session.commit()
+
+    response = anonymous_client.post(
+        "/login",
+        data={"username": "pendente", "password": "senha-pendente-segura"},
+        follow_redirects=True,
+    )
+    assert "aguardando aprovação" in response.get_data(as_text=True)
+
+
+def test_admin_can_reject_pending_account(admin_client, app):
+    with app.app_context():
+        user, _ = create_user("Solicitação Recusada", "recusada")
+        user.status = "pending"
+        user.is_active_account = False
+        db.session.commit()
+        user_id = user.id
+
+    response = admin_client.post(
+        f"/admin/usuarios/{user_id}/recusar", follow_redirects=True
+    )
+    assert "solicitação" in response.get_data(as_text=True).lower()
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        assert user.is_disabled
+        assert not user.is_active

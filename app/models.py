@@ -13,14 +13,20 @@ def utc_now():
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('pending', 'active', 'disabled')",
+            name="ck_users_status",
+        ),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    username = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    username = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     supabase_id = db.Column(db.String(255), unique=True, nullable=True, index=True)
     role = db.Column(db.String(20), nullable=False, default="driver")
-
+    status = db.Column(db.String(20), nullable=False, default="active", index=True)
     is_active_account = db.Column(db.Boolean, nullable=False, default=True)
     must_change_password = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
@@ -29,7 +35,15 @@ class User(UserMixin, db.Model):
 
     @property
     def is_active(self):
-        return self.is_active_account
+        return self.status == "active" and self.is_active_account
+
+    @property
+    def is_pending(self):
+        return self.status == "pending"
+
+    @property
+    def is_disabled(self):
+        return self.status == "disabled"
 
     @property
     def is_admin(self):
@@ -40,6 +54,14 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def activate(self):
+        self.status = "active"
+        self.is_active_account = True
+
+    def disable(self):
+        self.status = "disabled"
+        self.is_active_account = False
 
 
 class DailyRecord(db.Model):

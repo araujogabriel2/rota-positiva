@@ -46,7 +46,6 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
     JSON_AS_ASCII = False
     ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-    MAX_USERS = int(os.environ.get("MAX_USERS", "5"))
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
