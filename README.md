@@ -117,10 +117,10 @@ python run.py
 
 ## Contas de motoristas
 
-O sistema permite até 5 contas por padrão. Cada motorista visualiza e altera
-somente os próprios registros. O administrador visualiza todos os registros,
-filtra por motorista e gerencia as contas, mas não edita dados financeiros de
-outras pessoas.
+O sistema não possui limite artificial de contas. Cada motorista visualiza e
+altera somente os próprios registros. O administrador visualiza todos os
+registros, filtra por motorista e gerencia as contas, mas não edita dados
+financeiros de outras pessoas.
 
 Depois de atualizar o código existente, feche o Flask e execute uma vez:
 
@@ -133,6 +133,26 @@ uma senha temporária uma única vez. No primeiro login, o administrador deve
 criar uma senha pessoal. Novos motoristas também recebem uma senha temporária e
 são obrigados a trocá-la. O administrador pode redefinir senhas e desativar ou
 reativar contas.
+
+### Aprovação de contas Google
+
+Depois de atualizar uma instalação PostgreSQL existente, feche o Flask e
+execute uma vez:
+
+```powershell
+python scripts/apply_users_approval_migrations.py
+```
+
+O comando adiciona os estados `pending`, `active` e `disabled`, completa a
+coluna `supabase_id`, prepara as categorias globais e aplica políticas RLS que
+exigem uma conta ativa. As migrações aplicadas ficam registradas na tabela
+`schema_migrations` e não são repetidas.
+
+Uma pessoa que entra pela primeira vez com Google recebe o estado `pending` e
+não acessa dados financeiros. O administrador deve abrir **Motoristas** e
+selecionar **Aprovar acesso** ou **Recusar**. Uma solicitação recusada fica
+desativada e pode ser reativada depois. Contas locais criadas pelo administrador
+continuam recebendo senha temporária e já começam ativas.
 
 ## Como usar
 

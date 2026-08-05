@@ -11,7 +11,6 @@ class TestConfig:
     WTF_CSRF_ENABLED = False
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    MAX_USERS = 5
 
 
 @pytest.fixture()

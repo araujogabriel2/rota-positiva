@@ -7,10 +7,12 @@
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    username VARCHAR(40) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     supabase_id VARCHAR(255) UNIQUE,
     role VARCHAR(20) NOT NULL DEFAULT 'driver',
+    status VARCHAR(20) NOT NULL DEFAULT 'active'
+        CHECK (status IN ('pending', 'active', 'disabled')),
     is_active_account BOOLEAN NOT NULL DEFAULT TRUE,
     must_change_password BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -22,27 +24,31 @@ CREATE INDEX idx_users_supabase_id ON users(supabase_id);
 -- Segurança (RLS - Row Level Security)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Usuários podem ver seu próprio perfil ou admins veem tudo" 
-ON users FOR SELECT 
-USING (
-    supabase_id = auth.uid()::text 
-    OR 
-    (SELECT role FROM users WHERE supabase_id = auth.uid()::text) = 'admin'
-);
+CREATE OR REPLACE FUNCTION public.current_app_user_id()
+RETURNS INTEGER LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+    SELECT id FROM public.users
+    WHERE supabase_id = auth.uid()::text
+      AND status = 'active' AND is_active_account = TRUE
+    LIMIT 1
+$$;
 
-CREATE POLICY "Usuários podem atualizar seu próprio perfil ou admins atualizam tudo" 
-ON users FOR UPDATE 
-USING (
-    supabase_id = auth.uid()::text 
-    OR 
-    (SELECT role FROM users WHERE supabase_id = auth.uid()::text) = 'admin'
-);
+CREATE OR REPLACE FUNCTION public.current_app_user_is_admin()
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.users
+        WHERE supabase_id = auth.uid()::text
+          AND status = 'active'
+          AND is_active_account = TRUE AND role = 'admin'
+    )
+$$;
 
-CREATE POLICY "Admins podem excluir usuários" 
-ON users FOR DELETE 
-USING (
-    (SELECT role FROM users WHERE supabase_id = auth.uid()::text) = 'admin'
-);
+REVOKE ALL ON FUNCTION public.current_app_user_id() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.current_app_user_is_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.current_app_user_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.current_app_user_is_admin() TO authenticated;
+
+CREATE POLICY users_select_active ON users FOR SELECT TO authenticated
+USING (id = public.current_app_user_id() OR public.current_app_user_is_admin());
 
 
 
@@ -65,23 +71,23 @@ CREATE UNIQUE INDEX uq_categories_global_name ON categories(name) WHERE user_id 
 -- Segurança (RLS - Row Level Security)
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Usuários podem ver suas próprias categorias ou globais" 
-ON categories FOR SELECT 
+CREATE POLICY categories_select_active ON categories FOR SELECT TO authenticated
 USING (
-    user_id IS NULL 
-    OR 
-    user_id IN (
-        SELECT id FROM users WHERE supabase_id = auth.uid()::text
+    public.current_app_user_id() IS NOT NULL
+    AND (
+        user_id IS NULL
+        OR user_id = public.current_app_user_id()
+        OR public.current_app_user_is_admin()
     )
 );
 
-CREATE POLICY "Usuários podem gerenciar suas próprias categorias" 
-ON categories FOR ALL 
-USING (
-    user_id IN (
-        SELECT id FROM users WHERE supabase_id = auth.uid()::text
-    )
-);
+CREATE POLICY categories_insert_active ON categories FOR INSERT TO authenticated
+WITH CHECK (user_id = public.current_app_user_id());
+CREATE POLICY categories_update_active ON categories FOR UPDATE TO authenticated
+USING (user_id = public.current_app_user_id())
+WITH CHECK (user_id = public.current_app_user_id());
+CREATE POLICY categories_delete_active ON categories FOR DELETE TO authenticated
+USING (user_id = public.current_app_user_id());
 
 
 -- ==========================================================
@@ -106,12 +112,14 @@ CREATE INDEX idx_daily_records_date ON daily_records(date);
 -- Segurança (RLS - Row Level Security)
 ALTER TABLE daily_records ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Usuários podem gerenciar seus próprios registros" 
-ON daily_records FOR ALL 
+CREATE POLICY daily_records_active ON daily_records FOR ALL TO authenticated
 USING (
-    user_id IN (
-        SELECT id FROM users WHERE supabase_id = auth.uid()::text
-    )
+    user_id = public.current_app_user_id()
+    OR public.current_app_user_is_admin()
+)
+WITH CHECK (
+    user_id = public.current_app_user_id()
+    OR public.current_app_user_is_admin()
 );
 
 
@@ -133,13 +141,24 @@ CREATE INDEX idx_expenses_category_id ON expenses(category_id);
 -- Segurança (RLS - Row Level Security)
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Usuários podem gerenciar suas próprias despesas" 
-ON expenses FOR ALL 
+CREATE POLICY expenses_active ON expenses FOR ALL TO authenticated
 USING (
-    record_id IN (
-        SELECT id FROM daily_records 
-        WHERE user_id IN (
-            SELECT id FROM users WHERE supabase_id = auth.uid()::text
-        )
+    EXISTS (
+        SELECT 1 FROM daily_records
+        WHERE daily_records.id = expenses.record_id
+          AND (
+              daily_records.user_id = public.current_app_user_id()
+              OR public.current_app_user_is_admin()
+          )
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM daily_records
+        WHERE daily_records.id = expenses.record_id
+          AND (
+              daily_records.user_id = public.current_app_user_id()
+              OR public.current_app_user_is_admin()
+          )
     )
 );

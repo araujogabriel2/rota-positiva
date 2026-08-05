@@ -55,6 +55,7 @@ def create_user(name, username, role="driver"):
         name=name.strip(),
         username=validate_username(username),
         role=role,
+        status="active",
         must_change_password=True,
         is_active_account=True,
     )
@@ -64,15 +65,23 @@ def create_user(name, username, role="driver"):
 
 
 def create_oauth_user(name, email, supabase_id):
+    normalized_email = str(email or "").strip().lower()
+    normalized_supabase_id = str(supabase_id or "").strip()
+    if not normalized_email or len(normalized_email) > 255:
+        raise ValueError("O Google não forneceu um e-mail válido.")
+    if not normalized_supabase_id or len(normalized_supabase_id) > 255:
+        raise ValueError("O Supabase não forneceu uma identidade válida.")
+    display_name = str(name or "").strip() or normalized_email
     user = User(
-        name=name.strip(),
-        username=email.strip().lower(),
-        supabase_id=supabase_id,
+        name=display_name[:100],
+        username=normalized_email,
+        supabase_id=normalized_supabase_id,
         role="driver",
+        status="pending",
         must_change_password=False,
-        is_active_account=True,
-        password_hash="oauth_authenticated",
+        is_active_account=False,
     )
+    user.set_password(generate_temporary_password(32))
     db.session.add(user)
     return user
 

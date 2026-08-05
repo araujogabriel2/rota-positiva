@@ -47,6 +47,7 @@ def main():
                 name="Administrador",
                 username=Config.ADMIN_USERNAME.lower(),
                 role="admin",
+                status="active",
                 is_active_account=True,
                 must_change_password=True,
             )
@@ -57,6 +58,7 @@ def main():
                     username=admin.username,
                     password_hash=admin.password_hash,
                     role=admin.role,
+                    status="active",
                     is_active_account=True,
                     must_change_password=True,
                 ).returning(User.id)

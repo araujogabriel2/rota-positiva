@@ -20,7 +20,8 @@ def test_copy_data_preserves_financial_records(tmp_path):
             insert(User.__table__).values(
                 id=1, name="Motorista", username="motorista",
                 password_hash="hash-de-teste", role="driver",
-                is_active_account=True, must_change_password=False, created_at=now,
+                status="active", is_active_account=True,
+                must_change_password=False, created_at=now,
             )
         )
         source.execute(
