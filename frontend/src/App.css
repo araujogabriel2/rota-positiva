@@ -35,6 +35,26 @@
   color: #c9c8c3;
 }
 
+.api-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #a5a6a1;
+  font-size: 0.8rem;
+}
+
+.api-status span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #7a7c78;
+}
+
+.api-status--online span {
+  background: #49d17d;
+  box-shadow: 0 0 0 0.3rem rgba(73, 209, 125, 0.1);
+}
+
 .phase-badge {
   padding: 0.45rem 0.75rem;
   font-size: 0.78rem;
@@ -79,6 +99,131 @@
   box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.26);
   padding: clamp(1.35rem, 4vw, 2rem);
   backdrop-filter: blur(1rem);
+}
+
+.login-card,
+.welcome-panel {
+  border: 1px solid #303438;
+  border-radius: 1.5rem;
+  background: rgba(27, 30, 33, 0.9);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.26);
+  padding: clamp(1.35rem, 4vw, 2rem);
+}
+
+.login-card h2,
+.welcome-panel h1 {
+  color: #f7f5ef;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+.login-card .form-label {
+  color: #cfcec8;
+  font-weight: 650;
+}
+
+.login-card .form-control {
+  border-color: #3c4044;
+  background: #131517;
+  color: #f7f5ef;
+}
+
+.login-card .form-control:focus {
+  border-color: #f6b93b;
+  background: #131517;
+  color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(246, 185, 59, 0.16);
+}
+
+.login-card .btn-warning {
+  border-color: #f6b93b;
+  background: #f6b93b;
+  color: #17191b;
+  font-weight: 800;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.1rem 0;
+  color: #777a76;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.login-divider::before,
+.login-divider::after {
+  height: 1px;
+  flex: 1;
+  background: #34383c;
+  content: '';
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  border-color: #4a4e52;
+  background: #f7f5ef;
+  color: #1b1d1f;
+  font-weight: 750;
+}
+
+.btn-google:hover:not(:disabled) {
+  border-color: #fff;
+  background: #fff;
+  color: #111315;
+}
+
+.google-mark {
+  color: #4285f4;
+  font-family: Arial, sans-serif;
+  font-weight: 900;
+}
+
+.configuration-warning {
+  margin: 0.75rem 0 0;
+  color: #e6b85c;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.form-note {
+  margin: 1rem 0 0;
+  color: #858681;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.welcome-panel {
+  max-width: 48rem;
+}
+
+.session-details {
+  display: grid;
+  gap: 0.75rem;
+  margin: 2rem 0;
+}
+
+.session-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #303438;
+  padding-bottom: 0.75rem;
+}
+
+.session-details dt {
+  color: #858681;
+  font-weight: 500;
+}
+
+.session-details dd {
+  margin: 0;
+  color: #f7f5ef;
+  text-align: right;
 }
 
 .card-label {

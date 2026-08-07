@@ -15,6 +15,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         description="API financeira do Rota Positiva.",
     )
 
+    if settings is not None:
+        application.dependency_overrides[get_settings] = lambda: app_settings
+
     application.add_middleware(
         CORSMiddleware,
         allow_origins=app_settings.cors_origins_list,

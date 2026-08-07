@@ -1,32 +1,116 @@
-import { useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import './App.css'
-import { getApiHealth, type HealthResponse } from './services/api'
+import {
+  getApiHealth,
+  login,
+  type AuthSession,
+  type HealthResponse,
+} from './services/api'
+import {
+  getGoogleSession,
+  isGoogleLoginConfigured,
+  observeGoogleSession,
+  signInWithGoogle,
+  signOutFromGoogle,
+} from './services/supabase'
 
 type ConnectionState =
   | { status: 'loading' }
   | { status: 'online'; data: HealthResponse }
-  | { status: 'offline'; message: string }
+  | { status: 'offline' }
 
 function App() {
   const [connection, setConnection] = useState<ConnectionState>({ status: 'loading' })
+  const [session, setSession] = useState<AuthSession | null>(() => {
+    const storedSession = sessionStorage.getItem('rota-positiva-session')
+    return storedSession ? (JSON.parse(storedSession) as AuthSession) : null
+  })
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     let isActive = true
-
     getApiHealth()
       .then((data) => {
         if (isActive) setConnection({ status: 'online', data })
       })
-      .catch((error: unknown) => {
-        if (!isActive) return
-        const message = error instanceof Error ? error.message : 'Não foi possível consultar a API.'
-        setConnection({ status: 'offline', message })
+      .catch(() => {
+        if (isActive) setConnection({ status: 'offline' })
       })
-
     return () => {
       isActive = false
     }
   }, [])
+
+  useEffect(() => {
+    let isActive = true
+
+    getGoogleSession()
+      .then((googleSession) => {
+        if (isActive && googleSession) setSession(googleSession)
+      })
+      .catch(() => {
+        if (isActive) setError('Não foi possível recuperar a sessão do Google.')
+      })
+
+    const stopObserving = observeGoogleSession((googleSession) => {
+      if (isActive && googleSession) setSession(googleSession)
+    })
+
+    return () => {
+      isActive = false
+      stopObserving()
+    }
+  }, [])
+
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    setIsSubmitting(true)
+    try {
+      const newSession = await login({ email, password })
+      sessionStorage.setItem('rota-positiva-session', JSON.stringify(newSession))
+      setSession(newSession)
+      setPassword('')
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Não foi possível entrar. Tente novamente.',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleGoogleLogin() {
+    setError('')
+    setIsSubmitting(true)
+    try {
+      await signInWithGoogle()
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Não foi possível entrar com o Google.',
+      )
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await signOutFromGoogle()
+    } catch {
+      setError('A sessão local foi encerrada, mas o Supabase não respondeu ao logout.')
+    }
+    sessionStorage.removeItem('rota-positiva-session')
+    setSession(null)
+    setEmail('')
+    setPassword('')
+  }
 
   return (
     <main className="app-shell">
@@ -36,78 +120,107 @@ function App() {
             <span className="brand-mark" aria-hidden="true">R+</span>
             <span>Rota Positiva</span>
           </a>
-          <span className="phase-badge">Nova arquitetura · Fase 1</span>
+          <span className={`api-status api-status--${connection.status}`}>
+            <span aria-hidden="true" />
+            {connection.status === 'online' ? 'API conectada' : 'Verificando API'}
+          </span>
         </header>
 
-        <div className="row align-items-center g-5">
-          <div className="col-lg-7">
-            <p className="eyebrow mb-3">Base técnica em funcionamento</p>
-            <h1 className="display-title mb-4">
-              Um novo motor para sua <span>vida financeira.</span>
-            </h1>
-            <p className="lead-copy mb-4">
-              O React já está preparado para ser a nova interface do Rota Positiva.
-              Nesta etapa, validamos a comunicação segura com a API FastAPI.
+        {session ? (
+          <section className="welcome-panel mx-auto" aria-labelledby="welcome-title">
+            <p className="eyebrow mb-3">Sessão criada pelo Supabase</p>
+            <h1 id="welcome-title">Você entrou na nova aplicação.</h1>
+            <p className="lead-copy">
+              Esta é a primeira área autenticada do React. Nas próximas partes, o
+              FastAPI validará o token e carregará o perfil e os registros financeiros.
             </p>
-            <div className="d-flex flex-wrap gap-2" aria-label="Tecnologias da nova arquitetura">
-              <span className="tech-pill">React + TypeScript</span>
-              <span className="tech-pill">FastAPI</span>
-              <span className="tech-pill">API versionada</span>
+            <dl className="session-details">
+              <div>
+                <dt>Usuário</dt>
+                <dd>{session.user.email}</dd>
+              </div>
+              <div>
+                <dt>Emissor da sessão</dt>
+                <dd>Supabase Auth</dd>
+              </div>
+            </dl>
+            <button className="btn btn-outline-light btn-lg" type="button" onClick={handleLogout}>
+              Sair desta sessão
+            </button>
+          </section>
+        ) : (
+          <div className="row align-items-center g-5">
+            <div className="col-lg-7">
+              <p className="eyebrow mb-3">Controle financeiro para motoristas</p>
+              <h1 className="display-title mb-4">
+                Sua rota.<br /><span>Seu resultado.</span>
+              </h1>
+              <p className="lead-copy">
+                Entre para acompanhar faturamento, despesas, quilômetros e lucro em um só lugar.
+              </p>
+            </div>
+
+            <div className="col-lg-5">
+              <form className="login-card" onSubmit={handleLogin}>
+                <div className="mb-4">
+                  <p className="card-label mb-2">Acesse sua conta</p>
+                  <h2>Bem-vindo de volta</h2>
+                </div>
+
+                {error && <div className="alert alert-danger" role="alert">{error}</div>}
+
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="email">E-mail</label>
+                  <input
+                    className="form-control form-control-lg"
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="form-label" htmlFor="password">Senha</label>
+                  <input
+                    className="form-control form-control-lg"
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    minLength={6}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                  />
+                </div>
+
+                <button className="btn btn-warning btn-lg w-100" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Entrando...' : 'Entrar'}
+                </button>
+                <div className="login-divider" aria-hidden="true"><span>ou</span></div>
+                <button
+                  className="btn btn-google btn-lg w-100"
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isSubmitting || !isGoogleLoginConfigured()}
+                >
+                  <span className="google-mark" aria-hidden="true">G</span>
+                  Entrar com Google
+                </button>
+                {!isGoogleLoginConfigured() && (
+                  <p className="configuration-warning" role="status">
+                    Configure o Supabase no frontend para habilitar o Google.
+                  </p>
+                )}
+                <p className="form-note">A autenticação é processada pelo Supabase Auth.</p>
+              </form>
             </div>
           </div>
-
-          <div className="col-lg-5">
-            <article className="connection-card" aria-live="polite">
-              <p className="card-label">Conexão com o backend</p>
-              {connection.status === 'loading' && (
-                <div className="status-row">
-                  <span className="spinner-border spinner-border-sm text-warning" aria-hidden="true" />
-                  <div>
-                    <strong>Verificando a API...</strong>
-                    <p>Aguarde enquanto o frontend procura o FastAPI.</p>
-                  </div>
-                </div>
-              )}
-
-              {connection.status === 'online' && (
-                <div className="status-row">
-                  <span className="status-dot status-dot--online" aria-hidden="true" />
-                  <div>
-                    <strong>API conectada</strong>
-                    <p>{connection.data.application} · {connection.data.api_version}</p>
-                  </div>
-                </div>
-              )}
-
-              {connection.status === 'offline' && (
-                <div className="status-row">
-                  <span className="status-dot status-dot--offline" aria-hidden="true" />
-                  <div>
-                    <strong>API ainda não encontrada</strong>
-                    <p>{connection.message}</p>
-                    <small>Inicie o FastAPI na porta 8000 e atualize esta página.</small>
-                  </div>
-                </div>
-              )}
-
-              <hr />
-              <dl className="connection-details">
-                <div>
-                  <dt>Frontend</dt>
-                  <dd>React</dd>
-                </div>
-                <div>
-                  <dt>Backend</dt>
-                  <dd>FastAPI</dd>
-                </div>
-                <div>
-                  <dt>Endpoint</dt>
-                  <dd>/api/v1/health</dd>
-                </div>
-              </dl>
-            </article>
-          </div>
-        </div>
+        )}
       </section>
     </main>
   )
