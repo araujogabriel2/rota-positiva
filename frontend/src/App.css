@@ -1,0 +1,168 @@
+.app-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(246, 185, 59, 0.12), transparent 32rem),
+    linear-gradient(145deg, #111315 0%, #171a1d 55%, #101214 100%);
+  color: #f7f5ef;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #f7f5ef;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 0.8rem;
+  background: #f6b93b;
+  color: #151719;
+  font-weight: 900;
+}
+
+.phase-badge,
+.tech-pill {
+  border: 1px solid #34383c;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #c9c8c3;
+}
+
+.phase-badge {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.78rem;
+}
+
+.eyebrow {
+  color: #f6b93b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.display-title {
+  max-width: 12ch;
+  font-size: clamp(2.8rem, 7vw, 5.8rem);
+  font-weight: 800;
+  letter-spacing: -0.065em;
+  line-height: 0.94;
+}
+
+.display-title span {
+  color: #f6b93b;
+}
+
+.lead-copy {
+  max-width: 42rem;
+  color: #aeada8;
+  font-size: clamp(1rem, 2vw, 1.18rem);
+  line-height: 1.75;
+}
+
+.tech-pill {
+  padding: 0.55rem 0.8rem;
+  font-size: 0.82rem;
+}
+
+.connection-card {
+  border: 1px solid #303438;
+  border-radius: 1.5rem;
+  background: rgba(27, 30, 33, 0.82);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.26);
+  padding: clamp(1.35rem, 4vw, 2rem);
+  backdrop-filter: blur(1rem);
+}
+
+.card-label {
+  margin-bottom: 1.5rem;
+  color: #858681;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.status-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.9rem;
+  min-height: 5.25rem;
+}
+
+.status-row strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 1.08rem;
+}
+
+.status-row p,
+.status-row small {
+  margin: 0;
+  color: #999a96;
+  line-height: 1.55;
+}
+
+.status-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-top: 0.4rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.35rem rgba(255, 255, 255, 0.04);
+}
+
+.status-dot--online {
+  background: #49d17d;
+}
+
+.status-dot--offline {
+  background: #f16c6c;
+}
+
+.connection-card hr {
+  margin: 1.5rem 0;
+  border-color: #3a3d40;
+}
+
+.connection-details {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+}
+
+.connection-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.connection-details dt {
+  color: #858681;
+  font-weight: 500;
+}
+
+.connection-details dd {
+  margin: 0;
+  color: #e2e0da;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 575.98px) {
+  .phase-badge {
+    max-width: 8rem;
+    text-align: center;
+  }
+
+  .display-title {
+    font-size: clamp(2.6rem, 16vw, 4rem);
+  }
+}
