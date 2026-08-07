@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     cors_origins: str = Field(
         default="http://localhost:5173,http://127.0.0.1:5173"
     )
+    supabase_url: str = ""
+    supabase_publishable_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",
@@ -24,6 +26,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def is_supabase_auth_configured(self) -> bool:
+        return bool(self.supabase_url.strip() and self.supabase_publishable_key.strip())
 
 
 @lru_cache
